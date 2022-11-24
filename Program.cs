@@ -1,5 +1,10 @@
+using System.Text;
 using ConnectPgSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,9 +16,37 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<IUserService, UserService>();
 
+DotNetEnv.Env.Load();
+
 builder.Services.AddDbContext<UserContext>(
-    options => options.UseNpgsql(builder.Configuration.GetConnectionString("UserDb")));
-builder.Services.AddSwaggerGen();
+    options => options.UseNpgsql(
+        System.Environment.GetEnvironmentVariable("DB_URI")
+        ));
+builder.Services.AddSwaggerGen(
+    options => {
+    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme 
+    {
+        Description = "Authorization header using Bearer scheme (\"bearer {token}\")",
+        In = ParameterLocation.Header,
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey
+    });
+
+    options.OperationFilter<SecurityRequirementsOperationFilter>();
+}
+);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+.AddJwtBearer(options => {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(System.Environment.GetEnvironmentVariable("TOKEN"))),
+        ValidateIssuer = false,
+        ValidateAudience = false
+    };
+ });
 
 var app = builder.Build();
 
@@ -25,6 +58,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

@@ -1,7 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 using ConnectPgSql;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ConnectPgSql
 {
@@ -20,10 +23,10 @@ namespace ConnectPgSql
             if(loggedUser == null) return "";
 
             if(!VerifyPasswordHash(user.Password, loggedUser.Password, loggedUser.Salt)) {
-                return "";
+                return "failed login";
             }
 
-            return "Token";
+            return CreateToken(user);
         }
 
         public async Task<User> Register(UserDto user)
@@ -37,6 +40,11 @@ namespace ConnectPgSql
             await _userContext.Users.AddAsync(newUser);
             await _userContext.SaveChangesAsync();
             return newUser;
+        }
+
+        public List<User> GetUsers() 
+        {
+            return _userContext.Users.ToList();
         }
 
         public bool CheckIfUsernameExists(UserDto user)
@@ -73,6 +81,31 @@ namespace ConnectPgSql
                 var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
                 return computedHash.SequenceEqual(passwordHash);
             }
+        }
+
+        private string CreateToken(UserDto user) 
+        {
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(
+                System.Environment.GetEnvironmentVariable("TOKEN")
+            ));
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddDays(1),
+                signingCredentials: creds
+            );
+
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return jwt;
+
         }
     }
 }

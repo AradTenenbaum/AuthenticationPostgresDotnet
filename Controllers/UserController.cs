@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ConnectPgSql
@@ -25,6 +26,12 @@ namespace ConnectPgSql
         {
             if(!_userService.CheckIfUsernameExists(userRequest)) return BadRequest("Username do not exists");
             return Ok(_userService.Login(userRequest));
+        }
+
+        [HttpGet("all"), Authorize]
+        public ActionResult<List<User>> GetUsers() 
+        {
+            return Ok(_userService.GetUsers());
         }
     }
 }
