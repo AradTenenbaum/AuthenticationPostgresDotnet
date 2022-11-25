@@ -7,10 +7,10 @@ Password - string
 Creates a new user, create a salt and hash the password with it.
 Strong Password basic validation - 8 digits with at least one letter and number
 
-2. /api/user/login
-Username - string
-Password - string
-Verify the user details
+2. /api/user/login <br />
+Username - string <br />
+Password - string <br />
+Verify the user details <br />
 Returns a json web token
 
 ##### Users DB - Postgres
